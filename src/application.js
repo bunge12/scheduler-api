@@ -1,6 +1,5 @@
 const fs = require("fs");
 const path = require("path");
-
 const express = require("express");
 const bodyparser = require("body-parser");
 const helmet = require("helmet");
@@ -19,7 +18,7 @@ function read(file) {
     fs.readFile(
       file,
       {
-        encoding: "utf-8"
+        encoding: "utf-8",
       },
       (error, data) => {
         if (error) return reject(error);
@@ -36,7 +35,12 @@ module.exports = function application(
   app.use(cors());
   app.use(helmet());
   app.use(bodyparser.json());
+  app.use(express.static(__dirname));
+  app.use(express.static(path.join(__dirname, "build")));
 
+  app.get("/", function (req, res) {
+    res.sendFile(path.join(__dirname, "build", "index.html"));
+  });
   app.use("/api", days(db));
   app.use("/api", appointments(db, actions.updateAppointment));
   app.use("/api", interviewers(db));
@@ -44,7 +48,7 @@ module.exports = function application(
   if (ENV === "development" || ENV === "test") {
     Promise.all([
       read(path.resolve(__dirname, `db/schema/create.sql`)),
-      read(path.resolve(__dirname, `db/schema/${ENV}.sql`))
+      read(path.resolve(__dirname, `db/schema/${ENV}.sql`)),
     ])
       .then(([create, seed]) => {
         app.get("/api/debug/reset", (request, response) => {
@@ -56,12 +60,12 @@ module.exports = function application(
             });
         });
       })
-      .catch(error => {
+      .catch((error) => {
         console.log(`Error setting up the reset route: ${error}`);
       });
   }
 
-  app.close = function() {
+  app.close = function () {
     return db.end();
   };
 
